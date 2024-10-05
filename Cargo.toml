@@ -1,0 +1,9 @@
+[package]
+name = "conquest_of_the_dots"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = "0.14.2"
+bevy-inspector-egui = "0.26.0"
+bevy_lunex = "0.2.4"
