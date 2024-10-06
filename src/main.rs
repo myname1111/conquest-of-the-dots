@@ -50,6 +50,9 @@ struct MoveTo(Vec2);
 #[derive(Component)]
 struct TroopVelocity(f32);
 
+#[derive(Component)]
+struct SelectButton;
+
 const CIRCLE_RADIUS: f32 = 10.0;
 const BORDER_OFFSET: f32 = 1.;
 const DISTANCE_TOLERANCE: f32 = 1. / (1 >> 8) as f32;
@@ -58,8 +61,9 @@ fn setup(
     mut cmd: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    assets: Res<AssetServer>,
 ) {
-    cmd.spawn(Camera2dBundle::default());
+    cmd.spawn((Camera2dBundle::default(), MainUi));
     let circle_mesh = Mesh2dHandle(meshes.add(Circle {
         radius: CIRCLE_RADIUS,
     }));
@@ -92,13 +96,32 @@ fn setup(
     ))
     .with_children(|ui| {
         ui.spawn((
-            UiLink::<MainUi>::path("Root"),
+            UiLink::<MainUi>::path("Root/Button"),
+            SelectButton,
+            PickableBundle {
+                pickable: Pickable::IGNORE,
+                ..default()
+            },
             UiLayout::boundary()
                 .pos1(Ab(20.0))
                 .pos2(Rl(100.0) - Ab(20.0))
                 .pack::<Base>(),
+            UiText2dBundle {
+                text: Text::from_section(
+                    "Select",
+                    TextStyle {
+                        font_size: 30.,
+                        color: Color::WHITE,
+                        ..default()
+                    },
+                ),
+                ..default()
+            },
+            UiClickEmitter::SELF,
         ));
     });
+
+    cmd.spawn(Cursor2d::new());
 }
 
 fn handle_mouse_input(
@@ -210,10 +233,24 @@ fn deselect(
     }
 }
 
+fn handle_button_click(
+    mut ui_click_event_reader: EventReader<UiClickEvent>,
+    button_query: Query<(), With<SelectButton>>,
+) {
+    for event in ui_click_event_reader.read() {
+        let Ok(_) = button_query.get(event.target) else {
+            continue;
+        };
+
+        println!("Button clicked")
+    }
+}
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(UiDefaultPlugins)
         .add_event::<FinishedSelectingEvent>()
         .add_event::<DeselectEvent>()
         .init_resource::<SelectionBox>()
@@ -223,5 +260,6 @@ fn main() {
         .add_systems(Update, display_border)
         .add_systems(Update, deselect)
         .add_systems(Update, select_entities)
+        .add_systems(Update, handle_button_click)
         .run();
 }
